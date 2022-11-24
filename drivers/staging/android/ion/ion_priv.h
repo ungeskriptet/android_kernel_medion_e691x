@@ -26,13 +26,14 @@
 #include <linux/sched.h>
 #include <linux/shrinker.h>
 #include <linux/types.h>
+#include <linux/miscdevice.h>
+#include <linux/idr.h>
+#include "mtk/ion_drv.h"
+
 #ifdef CONFIG_ION_POOL_CACHE_POLICY
 #include <asm/cacheflush.h>
 #endif
 
-#include <linux/miscdevice.h>
-#include <linux/idr.h>
-#include "mtk/ion_drv.h"
 #include "ion.h"
 
 struct ion_buffer *ion_handle_buffer(struct ion_handle *handle);
@@ -112,6 +113,7 @@ struct ion_handle_debug {
  */
 struct ion_handle {
 	struct kref ref;
+	unsigned int user_ref_count;
 	struct ion_client *client;
 	struct ion_buffer *buffer;
 	struct rb_node node;
@@ -213,7 +215,6 @@ struct ion_heap_ops {
 	int (*map_user)(struct ion_heap *mapper, struct ion_buffer *buffer,
 			struct vm_area_struct *vma);
 	int (*shrink)(struct ion_heap *heap, gfp_t gfp_mask, int nr_to_scan);
-	void (*add_freelist)(struct ion_buffer *buffer);
 	int (*page_pool_total)(struct ion_heap *heap);
 };
 
@@ -419,14 +420,9 @@ void ion_carveout_heap_destroy(struct ion_heap *);
 struct ion_heap *ion_chunk_heap_create(struct ion_platform_heap *);
 void ion_chunk_heap_destroy(struct ion_heap *);
 
-struct ion_heap *ion_mm_heap_create(struct ion_platform_heap *);
-void ion_mm_heap_destroy(struct ion_heap *);
-
 struct ion_heap *ion_cma_heap_create(struct ion_platform_heap *);
 void ion_cma_heap_destroy(struct ion_heap *);
 
-struct ion_heap *ion_fb_heap_create(struct ion_platform_heap *);
-void ion_fb_heap_destroy(struct ion_heap *);
 /**
  * kernel api to allocate/free from carveout -- used when carveout is
  * used to back an architecture specific custom heap
@@ -435,8 +431,6 @@ ion_phys_addr_t ion_carveout_allocate(struct ion_heap *heap, unsigned long size,
 				      unsigned long align);
 void ion_carveout_free(struct ion_heap *heap, ion_phys_addr_t addr,
 		       unsigned long size);
-
-int ion_device_destroy_heaps(struct ion_device *dev, int need_lock);
 /**
  * The carveout heap returns physical addresses, since 0 may be a valid
  * physical address, this is used to indicate allocation failed

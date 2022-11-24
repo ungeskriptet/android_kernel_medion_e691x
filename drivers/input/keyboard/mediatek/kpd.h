@@ -39,7 +39,6 @@
 #include <hal_kpd.h>
 #include <linux/kernel.h>
 #include <linux/delay.h>
-#include <mt-plat/upmu_common.h>
 #include <mt-plat/mt_boot_common.h>
 
 #define KEY_CALL	KEY_SEND
@@ -136,5 +135,9 @@ void kpd_pwrkey_pmic_handler(unsigned long pressed);
 static inline void kpd_pwrkey_pmic_handler(unsigned long data);
 #endif
 void kpd_pmic_rstkey_handler(unsigned long pressed);
+
+#ifdef CONFIG_CUSTOM_KERNEL_KPD_MHALL
+void kpd_hallkey_report(unsigned long pressed);
+#endif
 
 #endif				/* __KPD_H__ */

@@ -39,6 +39,8 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/oom.h>
 
+#include "internal.h"
+
 int sysctl_panic_on_oom;
 int sysctl_oom_kill_allocating_task;
 int sysctl_oom_dump_tasks = 1;
@@ -258,6 +260,12 @@ enum oom_scan_t oom_scan_process_thread(struct task_struct *task,
 		unsigned long totalpages, const nodemask_t *nodemask,
 		bool force_kill)
 {
+	/* Bypass invalid task */
+	if (task_pid_nr(task) >= PID_MAX_DEFAULT || task_pid_nr(task) <= 0) {
+		pr_warn("%s: invalid task(%s)(%d)\n", __func__, task->comm, task_pid_nr(task));
+		return OOM_SCAN_CONTINUE;
+	}
+
 	if (oom_unkillable_task(task, NULL, nodemask))
 		return OOM_SCAN_CONTINUE;
 
@@ -402,6 +410,17 @@ static void dump_header(struct task_struct *p, gfp_t gfp_mask, int order,
 		show_mem(SHOW_MEM_FILTER_NODES);
 	if (sysctl_oom_dump_tasks)
 		dump_tasks(memcg, nodemask);
+
+	/* Show ION memory usage */
+	#ifdef CONFIG_MTK_ION
+	ion_mm_heap_memory_detail();
+	#endif
+
+	/* Show GPU memory usage */
+	#ifdef CONFIG_MTK_GPU_SUPPORT
+	if (mtk_dump_gpu_memory_usage() == false)
+		pr_warn("mtk_dump_gpu_memory_usage not support\n");
+	#endif
 }
 
 /*

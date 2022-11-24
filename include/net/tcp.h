@@ -88,7 +88,7 @@ void tcp_time_wait(struct sock *sk, int state, int timeo);
 				 * to ~3sec-8min depending on RTO.
 				 */
 
-#define TCP_RETR2	15	/*
+#define TCP_RETR2	10	/*
 				 * This should take at least
 				 * 90 minutes to time out.
 				 * RFC1122 says that the limit is 100 sec.
@@ -128,7 +128,7 @@ void tcp_time_wait(struct sock *sk, int state, int timeo);
 #define TCP_DELACK_MIN	4U
 #define TCP_ATO_MIN	4U
 #endif
-#define TCP_RTO_MAX	((unsigned)(120*HZ))
+#define TCP_RTO_MAX	((unsigned)(60*HZ))
 #define TCP_RTO_MIN	((unsigned)(HZ/5))
 #define TCP_TIMEOUT_INIT ((unsigned)(1*HZ))	/* RFC6298 2.1 initial RTO value	*/
 #define TCP_TIMEOUT_FALLBACK ((unsigned)(3*HZ))	/* RFC 1122 initial RTO value, now
@@ -277,11 +277,12 @@ extern unsigned int sysctl_tcp_notsent_lowat;
 extern int sysctl_tcp_min_tso_segs;
 extern int sysctl_tcp_autocorking;
 extern int sysctl_tcp_default_init_rwnd;
-extern int sysctl_tcp_rto_min;
-extern int sysctl_tcp_rto_max;
+extern u32 sysctl_tcp_rto_min;
+extern u32 sysctl_tcp_rto_max;
 extern atomic_long_t tcp_memory_allocated;
 extern struct percpu_counter tcp_sockets_allocated;
 extern int tcp_memory_pressure;
+extern int sysctl_tcp_ack_number;
 
 /*
  * The next routines deal with comparing 32 bit unsigned ints
@@ -1086,6 +1087,8 @@ void tcp_set_state(struct sock *sk, int state);
 
 void tcp_done(struct sock *sk);
 
+int tcp_abort(struct sock *sk, int err);
+
 static inline void tcp_sack_reset(struct tcp_options_received *rx_opt)
 {
 	rx_opt->dsack = 0;
@@ -1433,6 +1436,8 @@ static inline void tcp_check_send_head(struct sock *sk, struct sk_buff *skb_unli
 {
 	if (sk->sk_send_head == skb_unlinked)
 		sk->sk_send_head = NULL;
+	if (tcp_sk(sk)->highest_sack == skb_unlinked)
+		tcp_sk(sk)->highest_sack = NULL;
 }
 
 static inline void tcp_init_send_head(struct sock *sk)
@@ -1575,6 +1580,14 @@ struct tcp_iter_state {
 	loff_t			last_pos;
 };
 
+/* MTK_NET_CHANGES */
+/*
+ * reset tcp connection by uid
+ */
+struct uid_err {
+	int appuid;
+	int errNum;
+};
 int tcp_proc_register(struct net *net, struct tcp_seq_afinfo *afinfo);
 void tcp_proc_unregister(struct net *net, struct tcp_seq_afinfo *afinfo);
 
@@ -1602,6 +1615,10 @@ static inline bool tcp_stream_memory_free(const struct sock *sk)
 
 	return notsent_bytes < tcp_notsent_lowat(tp);
 }
+
+/* MTK_NET_CHANGES */
+extern void tcp_v4_reset_connections_by_uid(struct uid_err uid_e);
+extern void tcp_v4_handle_retrans_time_by_uid(struct uid_err uid_e);
 
 extern int tcp_nuke_addr(struct net *net, struct sockaddr *addr);
 

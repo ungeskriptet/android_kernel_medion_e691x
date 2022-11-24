@@ -1,3 +1,16 @@
+/*
+ * Copyright (C) 2015 MediaTek Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ */
+
 #ifndef BUILD_LK
 #include <linux/string.h>
 #endif
@@ -267,7 +280,7 @@ static void lcm_get_params(LCM_PARAMS *params)
 	params->dsi.horizontal_active_pixel = FRAME_WIDTH;
 
 #ifndef CONFIG_FPGA_EARLY_PORTING
-	params->dsi.PLL_CLOCK = 350;
+	params->dsi.PLL_CLOCK = 475;
 #else
 	params->dsi.pll_div1 = 0;
 	params->dsi.pll_div2 = 0;

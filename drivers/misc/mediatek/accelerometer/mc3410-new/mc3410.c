@@ -352,6 +352,9 @@ static int MC3XXX_i2c_read_block(struct i2c_client *client, u8 addr, u8 *data, u
 	int err;
 	struct i2c_msg msgs[2] = {{0}, {0} };
 
+	if (!client)
+		return -EINVAL;
+
 	mutex_lock(&MC3XXX_i2c_mutex);
 
 	msgs[0].addr = client->addr;
@@ -364,10 +367,7 @@ static int MC3XXX_i2c_read_block(struct i2c_client *client, u8 addr, u8 *data, u
 	msgs[1].len = len;
 	msgs[1].buf = data;
 
-	if (!client) {
-		mutex_unlock(&MC3XXX_i2c_mutex);
-		return -EINVAL;
-	} else if (len > C_I2C_FIFO_SIZE) {
+	if (len > C_I2C_FIFO_SIZE) {
 		GSE_ERR(" length %d exceeds %d\n", len, C_I2C_FIFO_SIZE);
 		mutex_unlock(&MC3XXX_i2c_mutex);
 		return -EINVAL;
@@ -1190,16 +1190,15 @@ static int	MC3XXX_ReadData(struct i2c_client *pt_i2c_client, s16 waData[MC3XXX_A
 	#ifdef _MC3XXX_SUPPORT_LPF_
 		struct mc3xxx_i2c_data   *_ptPrivData = NULL;
 	#endif
-	struct mc3xxx_i2c_data   *_pt_i2c_obj = ((struct mc3xxx_i2c_data *) i2c_get_clientdata(pt_i2c_client));
-
-	if (atomic_read(&_pt_i2c_obj->trace) & MCUBE_TRC_INFO)
-		GSE_LOG("[%s] s_nIsRBM_Enabled: %d\n", __func__, s_nIsRBM_Enabled);
+	struct mc3xxx_i2c_data   *_pt_i2c_obj = NULL;
 
 	if (NULL == pt_i2c_client) {
 		GSE_ERR("ERR: Null Pointer\n");
-
-	return MC3XXX_RETCODE_ERROR_NULL_POINTER;
+		return MC3XXX_RETCODE_ERROR_NULL_POINTER;
 	}
+	_pt_i2c_obj = ((struct mc3xxx_i2c_data *) i2c_get_clientdata(pt_i2c_client));
+	if (atomic_read(&_pt_i2c_obj->trace) & MCUBE_TRC_INFO)
+		GSE_LOG("[%s] s_nIsRBM_Enabled: %d\n", __func__, s_nIsRBM_Enabled);
 
 	if (!s_nIsRBM_Enabled) {
 		if (MC3XXX_RESOLUTION_LOW == s_bResolution) {
@@ -1565,7 +1564,7 @@ static int MC3XXX_SetPowerMode(struct i2c_client *client, bool enable)
 		return MC3XXX_RETCODE_ERROR_I2C;
 	}
 
-	GSE_LOG("set power read MC3XXX_REG_MODE_FEATURE =%x\n", databuf[0]);
+	/* GSE_LOG("set power read MC3XXX_REG_MODE_FEATURE =%x\n", databuf[0]); */
 
 	if (enable) {
 		databuf[0] = 0x41;
@@ -1594,7 +1593,7 @@ static int MC3XXX_SetPowerMode(struct i2c_client *client, bool enable)
  *****************************************/
 static void MC3XXX_SetResolution(void)
 {
-	GSE_LOG("[%s]\n", __func__);
+	/* GSE_LOG("[%s]\n", __func__); */
 
 	switch (s_bPCODE) {
 	case MC3XXX_PCODE_3230:
@@ -1650,7 +1649,7 @@ static void MC3XXX_SetSampleRate(struct i2c_client *pt_i2c_client)
 {
 	unsigned char	_baDataBuf[2] = { 0 };
 
-	GSE_LOG("[%s]\n", __func__);
+	/* GSE_LOG("[%s]\n", __func__); */
 
 	_baDataBuf[0] = MC3XXX_REG_SAMPLE_RATE;
 	_baDataBuf[1] = 0x00;
@@ -1661,7 +1660,7 @@ static void MC3XXX_SetSampleRate(struct i2c_client *pt_i2c_client)
 		_baData2Buf[0] = 0x2A;
 		MC3XXX_i2c_read_block(pt_i2c_client, 0x2A, _baData2Buf, 1);
 
-		GSE_LOG("[%s] REG(0x2A) = 0x%02X\n", __func__, _baData2Buf[0]);
+		/* GSE_LOG("[%s] REG(0x2A) = 0x%02X\n", __func__, _baData2Buf[0]); */
 
 		_baData2Buf[0] = (_baData2Buf[0] & 0xC0);
 
@@ -1713,7 +1712,7 @@ static void MC3XXX_ConfigRegRange(struct i2c_client *pt_i2c_client)
 	if (res < 0)
 		GSE_ERR("MC3XXX_ConfigRegRange fail\n");
 
-	GSE_LOG("[%s] set 0x%X\n", __func__, _baDataBuf[1]);
+	/* GSE_LOG("[%s] set 0x%X\n", __func__, _baDataBuf[1]); */
 }
 
 /*****************************************
@@ -1731,7 +1730,7 @@ static void MC3XXX_SetGain(void)
 
 	}
 
-	GSE_LOG("[%s] gain: %d / %d / %d\n", __func__, gsensor_gain.x, gsensor_gain.y, gsensor_gain.z);
+	/* GSE_LOG("[%s] gain: %d / %d / %d\n", __func__, gsensor_gain.x, gsensor_gain.y, gsensor_gain.z); */
 }
 
 /*****************************************
@@ -1741,7 +1740,7 @@ static int MC3XXX_Init(struct i2c_client *client, int reset_cali)
 {
 	unsigned char	_baDataBuf[2] = { 0 };
 
-	GSE_LOG("[%s]\n", __func__);
+	/* GSE_LOG("[%s]\n", __func__); */
 
 	#ifdef _MC3XXX_SUPPORT_POWER_SAVING_SHUTDOWN_POWER_
 	if (MC3XXX_RETCODE_SUCCESS != _mc3xxx_i2c_auto_probe(client))
@@ -1788,7 +1787,7 @@ static int MC3XXX_Init(struct i2c_client *client, int reset_cali)
 	init_waitqueue_head(&wq_mc3xxx_open_status);
 	#endif
 
-	GSE_LOG("[%s] init ok.\n", __func__);
+	/* GSE_LOG("[%s] init ok.\n", __func__); */
 
 	return MC3XXX_RETCODE_SUCCESS;
 }
@@ -1816,13 +1815,13 @@ static int MC3XXX_ReadChipInfo(struct i2c_client *client, char *buf, int bufsize
 static int MC3XXX_ReadSensorData(struct i2c_client *pt_i2c_client, char *pbBuf, int nBufSize)
 {
 	int					   _naAccelData[MC3XXX_AXES_NUM] = { 0 };
-	struct mc3xxx_i2c_data   *_pt_i2c_obj = ((struct mc3xxx_i2c_data *) i2c_get_clientdata(pt_i2c_client));
+	struct mc3xxx_i2c_data   *_pt_i2c_obj = NULL;
 
 	if ((NULL == pt_i2c_client) || (NULL == pbBuf)) {
 		GSE_ERR("ERR: Null Pointer\n");
 		return MC3XXX_RETCODE_ERROR_NULL_POINTER;
 	}
-
+	_pt_i2c_obj = ((struct mc3xxx_i2c_data *) i2c_get_clientdata(pt_i2c_client));
 	if (false == mc3xxx_sensor_power) {
 		if (MC3XXX_RETCODE_SUCCESS != MC3XXX_SetPowerMode(pt_i2c_client, true))
 			GSE_ERR("ERR: fail to set power mode!\n");
@@ -2315,10 +2314,10 @@ static ssize_t store_selftest_value(struct device_driver *ddri, const char *buf,
 
 	if (!MC3XXX_JudgeTestResult(client)) {
 		GSE_LOG("SELFTEST : PASS\n");
-		strcpy(selftestRes, "y");
+		strncpy(selftestRes, "y", strlen("y"));
 	} else {
 		GSE_LOG("SELFTEST : FAIL\n");
-		strcpy(selftestRes, "n");
+		strncpy(selftestRes, "n", strlen("n"));
 	}
 
 	return count;
@@ -3260,7 +3259,7 @@ static int mc3xxx_suspend(struct i2c_client *client, pm_message_t msg)
 	struct mc3xxx_i2c_data *obj = i2c_get_clientdata(client);
 	int err = 0;
 
-	GSE_LOG("mc3xxx_suspend\n");
+	/* GSE_LOG("mc3xxx_suspend\n"); */
 
 	if (msg.event == PM_EVENT_SUSPEND) {
 		if (obj == NULL) {
@@ -3289,7 +3288,7 @@ static int mc3xxx_resume(struct i2c_client *client)
 	struct mc3xxx_i2c_data *obj = i2c_get_clientdata(client);
 	int err;
 
-	GSE_LOG("mc3xxx_resume\n");
+	/* GSE_LOG("mc3xxx_resume\n"); */
 	if (obj == NULL) {
 		GSE_ERR("null pointer!!\n");
 		return -EINVAL;
@@ -3387,7 +3386,6 @@ static int mc3xxx_enable_nodata(int en)
 	for (retry = 0; retry < 3; retry++) {
 		res = MC3XXX_SetPowerMode(mc3xxx_obj_i2c_data->client, power);
 		if (res == 0) {
-			GSE_LOG("MC3XXX_SetPowerMode done\n");
 			break;
 		}
 		GSE_LOG("MC3XXX_SetPowerMode fail\n");
@@ -3397,7 +3395,7 @@ static int mc3xxx_enable_nodata(int en)
 		GSE_LOG("MC3XXX_SetPowerMode fail!\n");
 		return -1;
 	}
-	GSE_LOG("mc3xxx_enable_nodata OK!\n");
+	/* GSE_LOG("mc3xxx_enable_nodata OK!\n"); */
 	return 0;
 }
 
@@ -3602,6 +3600,9 @@ static int __init mc3xxx_init(void)
 static void __exit mc3xxx_exit(void)
 {
 	GSE_LOG("mc3xxx_exit\n");
+#ifdef CONFIG_CUSTOM_KERNEL_ACCELEROMETER_MODULE
+	success_Flag = false;
+#endif
 }
 
 /*----------------------------------------------------------------------------*/

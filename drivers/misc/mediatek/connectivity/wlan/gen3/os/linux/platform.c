@@ -1,4 +1,18 @@
 /*
+* Copyright (C) 2016 MediaTek Inc.
+*
+* This program is free software: you can redistribute it and/or modify it under the terms of the
+* GNU General Public License version 2 as published by the Free Software Foundation.
+*
+* This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+* without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See the GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License along with this program.
+* If not, see <http://www.gnu.org/licenses/>.
+*/
+
+/*
 ** Id: //Department/DaVinci/BRANCHES/MT6620_WIFI_DRIVER_V2_3/os/linux/platform.c#3
 */
 
@@ -11,96 +25,6 @@
 
 */
 
-/*
-** Log: platform.c
-**
-** 09 17 2012 cm.chang
-** [BORA00002149] [MT6630 Wi-Fi] Initial software development
-** Duplicate source from MT6620 v2.3 driver branch
-** (Davinci label: MT6620_WIFI_Driver_V2_3_120913_1942_As_MT6630_Base)
-**
-** 08 24 2012 cp.wu
-** [WCXRP00001269] [MT6620 Wi-Fi][Driver] cfg80211 porting merge back to DaVinci
-** .
- *
- * 11 14 2011 cm.chang
- * NULL
- * Fix compiling warning
- *
- * 11 10 2011 cp.wu
- * [WCXRP00001098] [MT6620 Wi-Fi][Driver] Replace printk by DBG LOG macros in linux porting layer
- * 1. eliminaite direct calls to printk in porting layer.
- * 2. replaced by DBGLOG, which would be XLOG on ALPS platforms.
- *
- * 09 13 2011 jeffrey.chang
- * [WCXRP00000983] [MT6620][Wi-Fi Driver] invalid pointer casting causes kernel panic during p2p connection
- * fix the pointer casting
- *
- * 06 29 2011 george.huang
- * [WCXRP00000818] [MT6620 Wi-Fi][Driver] Remove unused code segment regarding CONFIG_IPV6
- * .
- *
- * 06 28 2011 george.huang
- * [WCXRP00000818] [MT6620 Wi-Fi][Driver] Remove unused code segment regarding CONFIG_IPV6
- * remove un-used code
- *
- * 05 11 2011 jeffrey.chang
- * NULL
- * fix build error
- *
- * 05 09 2011 jeffrey.chang
- * [WCXRP00000710] [MT6620 Wi-Fi] Support pattern filter update function on IP address change
- * support ARP filter through kernel notifier
- *
- * 04 08 2011 pat.lu
- * [WCXRP00000623] [MT6620 Wi-Fi][Driver] use ARCH define to distinguish PC Linux driver
- * Use CONFIG_X86 instead of PC_LINUX_DRIVER_USE option to have proper compile setting for PC Linux driver
- *
- * 03 22 2011 pat.lu
- * [WCXRP00000592] [MT6620 Wi-Fi][Driver] Support PC Linux Environment Driver Build
- * Add a compiler option "PC_LINUX_DRIVER_USE" for building driver in PC Linux environment.
- *
- * 03 21 2011 cp.wu
- * [WCXRP00000540] [MT5931][Driver] Add eHPI8/eHPI16 support to Linux Glue Layer
- * improve portability for awareness of early version of linux kernel and wireless extension.
- *
- * 03 18 2011 jeffrey.chang
- * [WCXRP00000512] [MT6620 Wi-Fi][Driver] modify the net device relative functions to support the H/W multiple queue
- * remove early suspend functions
- *
- * 03 03 2011 jeffrey.chang
- * NULL
- * add the ARP filter callback
- *
- * 02 15 2011 jeffrey.chang
- * NULL
- * to support early suspend in android
- *
- * 02 01 2011 cp.wu
- * [WCXRP00000413] [MT6620 Wi-Fi][Driver] Merge 1103 changes on NVRAM file path change to DaVinci main trunk and V1.1
- * branch
- * upon Jason Zhang(NVRAM owner)'s change, ALPS has modified its NVRAM storage from /nvram/... to /data/nvram/...
- *
- * 11 01 2010 cp.wu
- * [WCXRP00000056] [MT6620 Wi-Fi][Driver] NVRAM implementation with Version Check[WCXRP00000150] [MT6620 Wi-Fi][Driver]
- * Add implementation for querying current TX rate from firmware auto rate module
- * 1) Query link speed (TX rate) from firmware directly with buffering mechanism to reduce overhead
- * 2) Remove CNM CH-RECOVER event handling
- * 3) cfg read/write API renamed with kal prefix for unified naming rules.
- *
- * 10 18 2010 cp.wu
- * [WCXRP00000056] [MT6620 Wi-Fi][Driver] NVRAM implementation with Version Check[WCXRP00000086] [MT6620 Wi-Fi][Driver]
- * The mac address is all zero at android
- * complete implementation of Android NVRAM access
- *
- * 10 05 2010 cp.wu
- * [WCXRP00000056] [MT6620 Wi-Fi][Driver] NVRAM implementation with Version Check
- * 1) add NVRAM access API
- * 2) fake scanning result when NVRAM doesn't exist and/or version mismatch. (off by compiler option)
- * 3) add OID implementation for NVRAM read/write service
- *
-**
-*/
 /*******************************************************************************
 *                         C O M P I L E R   F L A G S
 ********************************************************************************
@@ -319,67 +243,6 @@ int glUnregisterEarlySuspend(struct early_suspend *prDesc)
 }
 #endif
 
-
-#if CFG_SUPPORT_NVRAM
-static char nvrambuf[514] = {
-	  0x04, 0x01, /* Own Version For MT6628*/
-	  0x00, 0x00, /* Peer Version */
-	  /*{*/ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /*}*/ /* MAC ADDRESS */
-	  /*{*/ 0x00, 0x00, /*}*/ /* COUNTRY CODE */
-	  /*{*/ 0x26, 0x26, 0x00, 0x00, /*cTxPwr2G4Cck*/ /*cTxPwr2G4Dsss*/
-		0x22, 0x22, 0x22, 0x22, 0x21, 0x21, /*cTxPwr2G4OFDM*/
-		0x22, 0x22, 0x22, 0x20, 0x20, 0x20, /*cTxPwr2G4HT20*/
-		0x21, 0x21, 0x21, 0x1E, 0x1E, 0x1E, /*cTxPwr2G4HT40*/
-		0x22, 0x22, 0x22, 0x22, 0x22, 0x22, /*cTxPwr5GOFDM*/
-		0x22, 0x22, 0x22, 0x20, 0x20, 0x20, /*cTxPwr5GHT20*/
-		0x22, 0x22, 0x22, 0x20, 0x20, 0x20, /*}*/ /*cTxPwr5GHT40*/ /* TX_PWR_PARAM_T */
-	  /*{*/ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x20, 0x18, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 /*}*/,
-		/* aucEFUSE */
-		0x01, /* TX_PWR_PARAM_T is VALID */
-		0x01, /* 5G band is supported */
-		0x01, /* 2.4GHz band edge power enabled */
-		0x26, /* cBandEdgeMaxPwrCCK */
-		0x1E, /* cBandEdgeMaxPwrOFDM20 */
-		0x1A, /* cBandEdgeMaxPwrOFDM40 */
-		0x00, /* ucRegChannelListMap */
-		0x00, /* ucRegChannelListIndex */
-	/*{*/ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	  0x00, 0x00, 0x00, 0x00/*}*/, /* aucRegSubbandInfo */
-	  /*{*/   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 /*}*/,
-	  /* aucReserved2 */
-	  0x01, 0x00, /* Own Version */
-	  0x00, 0x00, /* Peer Version */
-	  0x0, /* uc2G4BwFixed20M */
-	  0x0, /* uc5GBwFixed20M */
-	  0x1, /* ucEnable5GBand */
-	  0x0, /* aucPReTailReserved */
-	/*{*/ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-	  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /*}*/   /* aucTailReserved */
-};
-#endif
 /*----------------------------------------------------------------------------*/
 /*!
 * \brief Utility function for reading data from files on NVRAM-FS
@@ -397,8 +260,47 @@ static char nvrambuf[514] = {
 static int nvram_read(char *filename, char *buf, ssize_t len, int offset)
 {
 #if CFG_SUPPORT_NVRAM
-	memcpy(buf, &nvrambuf[offset], len);
-	return len;
+	struct file *fd;
+	int retLen = -1;
+
+	mm_segment_t old_fs = get_fs();
+
+	set_fs(KERNEL_DS);
+
+	fd = filp_open(filename, O_RDONLY, 0644);
+
+	if (IS_ERR(fd)) {
+		DBGLOG(INIT, INFO, "[nvram_read] : failed to open!!\n");
+		return -1;
+	}
+
+	do {
+		if ((fd->f_op == NULL) || (fd->f_op->read == NULL)) {
+			DBGLOG(INIT, INFO, "[nvram_read] : file can not be read!!\n");
+			break;
+		}
+
+		if (fd->f_pos != offset) {
+			if (fd->f_op->llseek) {
+				if (fd->f_op->llseek(fd, offset, 0) != offset) {
+					DBGLOG(INIT, INFO, "[nvram_read] : failed to seek!!\n");
+					break;
+				}
+			} else {
+				fd->f_pos = offset;
+			}
+		}
+
+		retLen = fd->f_op->read(fd, buf, len, &fd->f_pos);
+
+	} while (FALSE);
+
+	filp_close(fd, NULL);
+
+	set_fs(old_fs);
+
+	return retLen;
+
 #else /* !CFG_SUPPORT_NVRAM */
 
 	return -EIO;
@@ -422,15 +324,47 @@ static int nvram_read(char *filename, char *buf, ssize_t len, int offset)
 static int nvram_write(char *filename, char *buf, ssize_t len, int offset)
 {
 #if CFG_SUPPORT_NVRAM
-	int i = 0;
-	char *p = buf;
+	struct file *fd;
+	int retLen = -1;
 
-	for (i = 0; i < len; i++) {
-		nvrambuf[offset+i] = *p;
-		p++;
+	mm_segment_t old_fs = get_fs();
+
+	set_fs(KERNEL_DS);
+
+	fd = filp_open(filename, O_WRONLY | O_CREAT, 0644);
+
+	if (IS_ERR(fd)) {
+		DBGLOG(INIT, INFO, "[nvram_write] : failed to open!!\n");
+		return -1;
 	}
 
-	return len;
+	do {
+		if ((fd->f_op == NULL) || (fd->f_op->write == NULL)) {
+			DBGLOG(INIT, INFO, "[nvram_write] : file can not be write!!\n");
+			break;
+		}
+		/* End of if */
+		if (fd->f_pos != offset) {
+			if (fd->f_op->llseek) {
+				if (fd->f_op->llseek(fd, offset, 0) != offset) {
+					DBGLOG(INIT, INFO, "[nvram_write] : failed to seek!!\n");
+					break;
+				}
+			} else {
+				fd->f_pos = offset;
+			}
+		}
+
+		retLen = fd->f_op->write(fd, buf, len, &fd->f_pos);
+
+	} while (FALSE);
+
+	filp_close(fd, NULL);
+
+	set_fs(old_fs);
+
+	return retLen;
+
 #else /* !CFG_SUPPORT_NVRAMS */
 
 	return -EIO;
@@ -457,7 +391,7 @@ BOOLEAN kalCfgDataRead16(IN P_GLUE_INFO_T prGlueInfo, IN UINT_32 u4Offset, OUT P
 	if (pu2Data == NULL)
 		return FALSE;
 
-	if (nvram_read(NULL,
+	if (nvram_read(WIFI_NVRAM_FILE_NAME,
 		       (char *)pu2Data, sizeof(unsigned short), u4Offset) != sizeof(unsigned short)) {
 		return FALSE;
 	} else {
@@ -480,7 +414,7 @@ BOOLEAN kalCfgDataRead16(IN P_GLUE_INFO_T prGlueInfo, IN UINT_32 u4Offset, OUT P
 /*----------------------------------------------------------------------------*/
 BOOLEAN kalCfgDataWrite16(IN P_GLUE_INFO_T prGlueInfo, UINT_32 u4Offset, UINT_16 u2Data)
 {
-	if (nvram_write(NULL,
+	if (nvram_write(WIFI_NVRAM_FILE_NAME,
 			(char *)&u2Data, sizeof(unsigned short), u4Offset) != sizeof(unsigned short)) {
 		return FALSE;
 	} else {

@@ -75,7 +75,6 @@
 #include <linux/aio.h>
 #include <linux/compiler.h>
 #ifdef CONFIG_MTPROF
-#include "mt_sched_mon.h"
 #include "mt_cputime.h"
 #endif
 #include <asm/pgtable.h>
@@ -90,6 +89,9 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/task.h>
 
+#ifdef CONFIG_MTK_SCHED_CMP_TGS
+#include <linux/sched.h>
+#endif
 #define WARN_FORK_DUR 1000000000
 
 /*
@@ -188,6 +190,24 @@ void thread_info_cache_init(void)
 # endif
 #endif
 
+#ifdef CONFIG_MTK_SCHED_CMP_TGS
+/*
+  current does not support NUMA, reserve node parameter for future usage.
+ */
+static inline struct thread_group_info_t *alloc_thread_group_info_node(struct task_struct *tsk, int node)
+{
+	int num_cluster;
+
+	num_cluster = arch_get_nr_clusters();
+	return kmalloc(sizeof(struct thread_group_info_t) * num_cluster, GFP_KERNEL);
+}
+
+static inline void free_thread_group_info(struct thread_group_info_t *tg)
+{
+	kfree(tg);
+}
+#endif
+
 /* SLAB cache for signal_struct structures (tsk->signal) */
 static struct kmem_cache *signal_cachep;
 
@@ -225,6 +245,9 @@ void free_task(struct task_struct *tsk)
 	ftrace_graph_exit_task(tsk);
 	put_seccomp_filter(tsk);
 	arch_release_task_struct(tsk);
+#ifdef CONFIG_MTK_SCHED_CMP_TGS
+	free_thread_group_info(tsk->thread_group_info);
+#endif
 	free_task_struct(tsk);
 }
 EXPORT_SYMBOL(free_task);
@@ -329,6 +352,9 @@ static struct task_struct *dup_task_struct(struct task_struct *orig)
 	struct thread_info *ti;
 	int node = tsk_fork_get_node(orig);
 	int err;
+#ifdef CONFIG_MTK_SCHED_CMP_TGS
+	struct thread_group_info_t *tg;
+#endif
 
 	tsk = alloc_task_struct_node(node);
 	if (!tsk) {
@@ -350,6 +376,17 @@ static struct task_struct *dup_task_struct(struct task_struct *orig)
 		goto free_ti;
 	}
 	tsk->stack = ti;
+
+#ifdef CONFIG_MTK_SCHED_CMP_TGS
+	tg = alloc_thread_group_info_node(tsk, node);
+	if (!tg) {
+		pr_err("[%d:%s] fork fail at alloc_thread_group_info_node, please check kmalloc\n",
+			current->pid, current->comm);
+		goto free_tg;
+	}
+	tsk->thread_group_info = tg;
+#endif
+
 #ifdef CONFIG_SECCOMP
 	/*
 	 * We must handle setting up seccomp filters once we're under
@@ -384,6 +421,10 @@ static struct task_struct *dup_task_struct(struct task_struct *orig)
 
 	return tsk;
 
+#ifdef CONFIG_MTK_SCHED_CMP_TGS
+free_tg:
+	free_thread_group_info(tg);
+#endif
 free_ti:
 	free_thread_info(ti);
 free_tsk:
@@ -917,6 +958,12 @@ static int copy_mm(unsigned long clone_flags, struct task_struct *tsk)
 	int retval;
 
 	tsk->min_flt = tsk->maj_flt = 0;
+
+	tsk->fm_flt = 0;
+#ifdef CONFIG_SWAP
+	tsk->swap_in = tsk->swap_out = 0;
+#endif
+
 	tsk->nvcsw = tsk->nivcsw = 0;
 #ifdef CONFIG_DETECT_HUNG_TASK
 	tsk->last_switch_count = tsk->nvcsw + tsk->nivcsw;
@@ -1199,6 +1246,23 @@ init_task_pid(struct task_struct *task, enum pid_type type, struct pid *pid)
 {
 	 task->pids[type].pid = pid;
 }
+
+#ifdef CONFIG_MTK_SCHED_CMP_TGS
+static void mt_init_thread_group(struct task_struct *p)
+{
+	int i, num_cluster;
+
+	raw_spin_lock_init(&p->thread_group_info_lock);
+	num_cluster = arch_get_nr_clusters();
+
+	for (i = 0; i < num_cluster; i++) {
+		p->thread_group_info[i].cfs_nr_running = 0;
+		p->thread_group_info[i].nr_running = 0;
+		p->thread_group_info[i].loadwop_avg_contrib = 0;
+	}
+
+}
+#endif
 
 /*
  * This creates a new process as a copy of the old one,
@@ -1499,6 +1563,9 @@ static struct task_struct *copy_process(unsigned long clone_flags,
 
 	p->pdeath_signal = 0;
 	INIT_LIST_HEAD(&p->thread_group);
+#ifdef CONFIG_MTK_SCHED_CMP_TGS
+	mt_init_thread_group(p);
+#endif
 	p->task_works = NULL;
 
 	/*
@@ -1718,6 +1785,7 @@ long do_fork(unsigned long clone_flags,
 
 		end = sched_clock();
 		dur = end - start;
+		trace_sched_fork_time(current, p, dur);
 		if (dur > WARN_FORK_DUR) {
 			pr_err("[%d:%s] fork [%d:%s] total fork time[%llu us] > 1s\n",
 			current->pid, current->comm, p->pid, p->comm, dur);
@@ -1727,8 +1795,6 @@ long do_fork(unsigned long clone_flags,
 		/* mt shceduler profiling*/
 		save_mtproc_info(p, sched_clock());
 #endif
-		/* mt throttle monitor */
-		save_mt_rt_mon_info(p, sched_clock());
 #endif
 		wake_up_new_task(p);
 
@@ -1859,13 +1925,21 @@ static int check_unshare_flags(unsigned long unshare_flags)
 				CLONE_NEWUSER|CLONE_NEWPID))
 		return -EINVAL;
 	/*
-	 * Not implemented, but pretend it works if there is nothing to
-	 * unshare. Note that unsharing CLONE_THREAD or CLONE_SIGHAND
-	 * needs to unshare vm.
+	 * Not implemented, but pretend it works if there is nothing
+	 * to unshare.  Note that unsharing the address space or the
+	 * signal handlers also need to unshare the signal queues (aka
+	 * CLONE_THREAD).
 	 */
 	if (unshare_flags & (CLONE_THREAD | CLONE_SIGHAND | CLONE_VM)) {
-		/* FIXME: get_task_mm() increments ->mm_users */
-		if (atomic_read(&current->mm->mm_users) > 1)
+		if (!thread_group_empty(current))
+			return -EINVAL;
+	}
+	if (unshare_flags & (CLONE_SIGHAND | CLONE_VM)) {
+		if (atomic_read(&current->sighand->count) > 1)
+			return -EINVAL;
+	}
+	if (unshare_flags & CLONE_VM) {
+		if (!current_is_single_threaded())
 			return -EINVAL;
 	}
 
@@ -1934,15 +2008,15 @@ SYSCALL_DEFINE1(unshare, unsigned long, unshare_flags)
 	if (unshare_flags & CLONE_NEWUSER)
 		unshare_flags |= CLONE_THREAD | CLONE_FS;
 	/*
-	 * If unsharing a thread from a thread group, must also unshare vm.
-	 */
-	if (unshare_flags & CLONE_THREAD)
-		unshare_flags |= CLONE_VM;
-	/*
 	 * If unsharing vm, must also unshare signal handlers.
 	 */
 	if (unshare_flags & CLONE_VM)
 		unshare_flags |= CLONE_SIGHAND;
+	/*
+	 * If unsharing a signal handlers, must also unshare the signal queues.
+	 */
+	if (unshare_flags & CLONE_SIGHAND)
+		unshare_flags |= CLONE_THREAD;
 	/*
 	 * If unsharing namespace, must also unshare filesystem information.
 	 */

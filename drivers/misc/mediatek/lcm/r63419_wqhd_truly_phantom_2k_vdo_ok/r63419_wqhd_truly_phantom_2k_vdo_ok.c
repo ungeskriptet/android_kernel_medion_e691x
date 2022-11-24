@@ -1,3 +1,15 @@
+/*
+* Copyright (C) 2016 MediaTek Inc.
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License version 2 as
+* published by the Free Software Foundation.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+* See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+*/
 #ifndef BUILD_LK
 #include <linux/string.h>
 #include <linux/kernel.h>
@@ -37,6 +49,9 @@ static const unsigned char LCD_MODULE_ID = 0x01; /*  haobing modified 2013.07.11
 #define LCM_DSI_CMD_MODE	0
 #define FRAME_WIDTH	(1440)
 #define FRAME_HEIGHT	(2560)
+/* physical size in um */
+#define LCM_PHYSICAL_WIDTH									(74520)
+#define LCM_PHYSICAL_HEIGHT									(132480)
 #define GPIO_65132_EN GPIO_LCD_BIAS_ENP_PIN
 
 #define REGFLAG_PORT_SWAP	0xFFFA
@@ -365,9 +380,13 @@ static struct LCM_setting_table lcm_deep_sleep_mode_in_setting[] = {
 };
 #endif
 static struct LCM_setting_table lcm_suspend_setting[] = {
+	/* Display off sequence */
 	{ 0x28, 0, {} },
-	{ 0x10, 0, {} },
-	{ REGFLAG_DELAY, 120, {} }
+	{REGFLAG_DELAY, 20, {} },
+	{0x10, 0, {} },
+	{0xB0, 1, {0x00} },
+	{0xB1, 1, {0x01} },
+	{REGFLAG_DELAY, 80, {} },
 };
 
 #if 0 /* defined but not used */
@@ -428,6 +447,10 @@ static void lcm_get_params(LCM_PARAMS *params)
 
 	params->width  = FRAME_WIDTH;
 	params->height = FRAME_HEIGHT;
+	params->physical_width = LCM_PHYSICAL_WIDTH/1000;
+	params->physical_height = LCM_PHYSICAL_HEIGHT/1000;
+	params->physical_width_um = LCM_PHYSICAL_WIDTH;
+	params->physical_height_um = LCM_PHYSICAL_HEIGHT;
 	params->lcm_if = LCM_INTERFACE_DSI_DUAL;
 	params->lcm_cmd_if = LCM_INTERFACE_DSI0;
 
@@ -449,14 +472,16 @@ static void lcm_get_params(LCM_PARAMS *params)
 
 	/* Highly depends on LCD driver capability. */
 	params->dsi.packet_size = 256;
-	params->dsi.ssc_disable = 1;
+	params->dsi.ssc_disable = 0;
+	params->dsi.ssc_range = 3;
 	/*video mode timing */
 
 	params->dsi.PS = LCM_PACKED_PS_24BIT_RGB888;
 
 	params->dsi.vertical_sync_active				= 4;
-	params->dsi.vertical_backporch					= 4;
-	params->dsi.vertical_frontporch					= 8;
+	params->dsi.vertical_backporch					= 6;
+	params->dsi.vertical_frontporch					= 20;
+	params->dsi.vertical_frontporch_for_low_power			= 600;
 	params->dsi.vertical_active_line				= FRAME_HEIGHT;
 
 	params->dsi.horizontal_sync_active				= 8;
@@ -467,13 +492,13 @@ static void lcm_get_params(LCM_PARAMS *params)
 	params->dsi.PLL_CLOCK = 450; /*this value must be in MTK suggested table */
 #else
 	/* params->dsi.PLL_CLOCK = 480; */
-	params->dsi.PLL_CLOCK = 440;
+	params->dsi.PLL_CLOCK = 423;
 #endif
 	params->dsi.ufoe_enable  = 1;
 	params->dsi.ufoe_params.lr_mode_en = 1;
 
 	params->dsi.esd_check_enable = 1;
-	params->dsi.customization_esd_check_enable      = 0;
+	params->dsi.customization_esd_check_enable      = 1;
 	params->dsi.lcm_esd_check_table[0].cmd          = 0x53;/*0x0A; */
 	params->dsi.lcm_esd_check_table[0].count        = 1;
 	params->dsi.lcm_esd_check_table[0].para_list[0] = 0x2C;/*0x1C; */
@@ -648,9 +673,10 @@ static void lcm_suspend(void)
 	mt_set_gpio_mode(GPIO_65132_EN, GPIO_MODE_00);
 	mt_set_gpio_dir(GPIO_65132_EN, GPIO_DIR_OUT);
 	mt_set_gpio_out(GPIO_65132_EN, GPIO_OUT_ZERO);
+#else
+	set_gpio_lcd_enp(0);
 #endif
 	push_table(lcm_suspend_setting, sizeof(lcm_suspend_setting) / sizeof(struct LCM_setting_table), 1);
-	SET_RESET_PIN(0);
 }
 
 static void lcm_resume(void)

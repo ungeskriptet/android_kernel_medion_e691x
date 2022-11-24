@@ -51,6 +51,18 @@ config MT_RT_SCHED
 	   under the consideration with power-saving and following the policy of hotplug and
 	   DVFS (do not UP processor forcedly).
 
+config MTK_COMPAT
+	bool "mt fast mode switching enhancement"
+	depends on COMPAT
+	default n
+	help
+	   Current design will save/restore all registers in mode switching.
+	   However, when kernel layer is 64-bits and application layer is 32 bits,
+	   the 32-bits application use a part of registers.
+	   Save/restore all register will consume CPU cycles.
+	   To avoid the unnecessary save/restore registers behavior,
+	   we propose fast mode switching method to optimize the mode switching
+
 config MT_SCHED_INTEROP
 	bool "mtk scheduling interopation enhancement"
 	default n
@@ -68,6 +80,16 @@ config MT_SCHED_TRACE
 	   mt_sched_printf for scheduling module to output info and
 	   RT scheduling info to ftrace,
 	   including select_task_rq, check_preempt, find_lowest_rq.
+	   Say no if not sure.
+
+config MT_SCHED_TRACE_DETAIL
+	bool "mt scheduling trace log information in more dtails"
+	depends on MT_SCHED_TRACE
+	default n
+	help
+	   MTK scheduling trace in details. It logs more scheduler details
+	   into ftrace.
+	   depends on ftrace.
 	   Say no if not sure.
 
 config MT_SCHED_DEBUG

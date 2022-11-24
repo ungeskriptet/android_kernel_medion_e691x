@@ -1,3 +1,16 @@
+/*
+ * Copyright (C) 2015 MediaTek Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ */
+
 #include "mt65xx_lcm_list.h"
 #include <lcm_drv.h>
 #ifdef BUILD_LK
@@ -6,6 +19,7 @@
 #include <linux/delay.h>
 /* #include <mach/mt_gpio.h> */
 #endif
+LCM_DSI_MODE_CON lcm_dsi_mode;
 
 /* used to identify float ID PIN status */
 #define LCD_HW_ID_STATUS_LOW      0
@@ -16,18 +30,27 @@
 #ifdef BUILD_LK
 #define LCD_DEBUG(fmt)  dprintf(CRITICAL, fmt)
 #else
-#define LCD_DEBUG(fmt, args...)  pr_notice("[KERNEL/LCM]"fmt, ##args)
+#define LCD_DEBUG(fmt, args...)  pr_debug("[KERNEL/LCM]"fmt, ##args)
 #endif
 
 LCM_DRIVER *lcm_driver_list[] = {
-#if defined(MTK_LCM_DEVICE_TREE_SUPPORT)
-	&lcm_common_drv,
-#else
 #if defined(OTM1284A_HD720_DSI_VDO_TM)
 	&otm1284a_hd720_dsi_vdo_tm_lcm_drv,
 #endif
 #if defined(OTM1285A_HD720_DSI_VDO_TM)
 	&otm1285a_hd720_dsi_vdo_tm_lcm_drv,
+#endif
+
+#if defined(NT35595_FHD_DSI_CMD_TRULY_8163)
+	&nt35595_fhd_dsi_cmd_truly_8163_lcm_drv,
+#endif
+
+#if defined(NT35523_WXGA_DSI_VDO_8163)
+	&nt35523_wxga_dsi_vdo_8163_lcm_drv,
+#endif
+
+#if defined(FT8707_FHD_DSI_VDO_LGD)
+	&ft8707_fhd_dsi_vdo_lgd_drv,
 #endif
 
 #if defined(EK79007_WSVGALNL_DSI_VDO)
@@ -430,6 +453,10 @@ LCM_DRIVER *lcm_driver_list[] = {
 	&nt35512_wvga_dsi_vdo_boe_drv,
 #endif
 
+#if defined(HX8389C_DSI_VDO)
+	&hx8389c_dsi_vdo_lcm_drv,
+#endif
+
 #if defined(HX8392A_DSI_CMD)
 	&hx8392a_dsi_cmd_lcm_drv,
 #endif
@@ -806,11 +833,23 @@ LCM_DRIVER *lcm_driver_list[] = {
 	&r63419_wqhd_truly_phantom_cmd_lcm_drv,
 #endif
 
+#if defined(R63419_WQHD_TRULY_PHANTOM_2K_CMD_OK_MT6797)
+	&r63419_wqhd_truly_phantom_cmd_lcm_drv,
+#endif
+
 #if defined(R63419_WQHD_TRULY_PHANTOM_2K_VDO_OK)
 	&r63419_wqhd_truly_phantom_vdo_lcm_drv,
 #endif
 
+#if defined(R63419_WQHD_TRULY_PHANTOM_2K_VDO_OK_MT6797)
+	&r63419_wqhd_truly_phantom_vdo_lcm_drv,
+#endif
+
 #if defined(R63419_FHD_TRULY_PHANTOM_2K_CMD_OK)
+	&r63419_fhd_truly_phantom_lcm_drv,
+#endif
+
+#if defined(R63419_FHD_TRULY_PHANTOM_2K_CMD_OK_MT6797)
 	&r63419_fhd_truly_phantom_lcm_drv,
 #endif
 
@@ -862,6 +901,10 @@ LCM_DRIVER *lcm_driver_list[] = {
 	&otm1906b_fhd_dsi_cmd_jdi_tps65132_mt6797_lcm_drv,
 #endif
 
+#if defined(OTM1906B_FHD_DSI_VDO_JDI_TPS65132_MT6797)
+	&otm1906b_fhd_dsi_vdo_jdi_tps65132_mt6797_lcm_drv,
+#endif
+
 #if defined(HX8394C_WXGA_DSI_VDO)
 	&hx8394c_wxga_dsi_vdo_lcm_drv,
 #endif
@@ -889,6 +932,15 @@ LCM_DRIVER *lcm_driver_list[] = {
 #if defined(NT35695_FHD_DSI_CMD_TRULY_NT50358_QHD)
 	&nt35695_fhd_dsi_cmd_truly_nt50358_qhd_lcm_drv,
 #endif
+
+#if defined(NT35695_FHD_DSI_CMD_TRULY_NT50358_LANESWAP)
+	&nt35695_fhd_dsi_cmd_truly_nt50358_laneswap_lcm_drv,
+#endif
+
+#if defined(NT35695_FHD_DSI_VDO_TRULY_NT50358_LANESWAP)
+	&nt35695_fhd_dsi_vdo_truly_nt50358_laneswap_lcm_drv,
+#endif
+
 #if defined(RM69032_DSI_CMD)
 	&rm69032_dsi_cmd_lcm_drv,
 #endif
@@ -917,24 +969,72 @@ LCM_DRIVER *lcm_driver_list[] = {
 	&nt35595_truly_fhd_dsi_vdo_lcm_drv,
 #endif
 
+#if defined(B080UAN01_2_WUXGA_DSI_VDO)
+	&b080uan01_2_wuxga_dsi_vdo_lcm_drv,
+#endif
+
+#if defined(NT36850_WQHD_DSI_2K_CMD)
+	&nt36850_wqhd_dsi_2k_cmd_lcm_drv,
+#endif
+
+#if defined(S6E3HA3_WQHD_2K_CMD)
+	&s6e3ha3_wqhd_2k_cmd_lcm_drv,
+#endif
+
+#if defined(NT35595_FHD_DSI_CMD_TRULY_NT50358_720P_EXTERN)
+	&nt35595_fhd_dsi_cmd_truly_nt50358_720p_extern_lcm_drv,
+#endif
+
+#if defined(NT35695_FHD_DSI_VDO_TRULY_NT50358_720P)
+	&nt35695_fhd_dsi_vdo_truly_nt50358_720p_lcm_drv,
+#endif
+
+#if defined(AUO101DP26V1_DSI_VDO)
+    &auo101dp26v1_dsi_vdo_lcm_drv,
 #endif
 };
 
-#if defined(MTK_LCM_DEVICE_TREE_SUPPORT)
 unsigned char lcm_name_list[][128] = {
 #if defined(HX8392A_DSI_CMD)
 	"hx8392a_dsi_cmd",
+#endif
+
+#if defined(S6E3HA3_WQHD_2K_CMD)
+	"s6e3ha3_wqhd_2k_cmd",
 #endif
 
 #if defined(HX8392A_DSI_VDO)
 	"hx8392a_vdo_cmd",
 #endif
 
+#if defined(HX8392A_DSI_CMD_FWVGA)
+	"hx8392a_dsi_cmd_fwvga",
+#endif
+
 #if defined(OTM9608_QHD_DSI_CMD)
-	"otm9608_qhd_dsi_cmd",
+	"otm9608a_qhd_dsi_cmd",
+#endif
+
+#if defined(OTM9608_QHD_DSI_VDO)
+	"otm9608a_qhd_dsi_vdo",
+#endif
+
+#if defined(R63417_FHD_DSI_CMD_TRULY_NT50358)
+	"r63417_fhd_dsi_cmd_truly_nt50358_drv",
+#endif
+
+#if defined(R63417_FHD_DSI_CMD_TRULY_NT50358_QHD)
+	"r63417_fhd_dsi_cmd_truly_nt50358_qhd_drv",
+#endif
+
+#if defined(R63417_FHD_DSI_VDO_TRULY_NT50358)
+	"r63417_fhd_dsi_vdo_truly_nt50358_drv",
+#endif
+
+#if defined(R63419_WQHD_TRULY_PHANTOM_2K_CMD_OK)
+	"r63419_wqhd_truly_phantom_2k_cmd_ok",
 #endif
 };
-#endif
 
 #define LCM_COMPILE_ASSERT(condition) LCM_COMPILE_ASSERT_X(condition, __LINE__)
 #define LCM_COMPILE_ASSERT_X(condition, line) LCM_COMPILE_ASSERT_XX(condition, line)

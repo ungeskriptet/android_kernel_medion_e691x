@@ -1,3 +1,16 @@
+/*
+ * Copyright (C) 2016 MediaTek Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ */
+
         .global write_cntpctl
 write_cntpctl:
         .func
@@ -54,5 +67,17 @@ mt_restore_generic_timer:
 	ldp	x2, x3, [x0, #24]
 	msr	CNTV_CTL_EL0, x2
 	msr	CNTV_TVAL_EL0, x3
+        ret
+	.endfunc
+
+        .global mt_save_banked_registers
+mt_save_banked_registers:
+	.func
+        ret
+	.endfunc
+
+        .global mt_restore_banked_registers
+mt_restore_banked_registers:
+	.func
         ret
 	.endfunc

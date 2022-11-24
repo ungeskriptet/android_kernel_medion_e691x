@@ -1,13 +1,25 @@
+/*
+ * Copyright (C) 2015 MediaTek Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ */
+
 #ifndef __MT65XX_LCM_LIST_H__
 #define __MT65XX_LCM_LIST_H__
 
 #include <lcm_drv.h>
 
-#if defined(MTK_LCM_DEVICE_TREE_SUPPORT)
-extern LCM_DRIVER lcm_common_drv;
-#else
 extern LCM_DRIVER otm1282a_hd720_dsi_vdo_60hz_lcm_drv;
 extern LCM_DRIVER otm1282a_hd720_dsi_vdo_lcm_drv;
+extern LCM_DRIVER nt35595_fhd_dsi_cmd_truly_8163_lcm_drv;
+extern LCM_DRIVER nt35523_wxga_dsi_vdo_8163_lcm_drv;
 extern LCM_DRIVER vvx10f008b00_wuxga_dsi_vdo_lcm_drv;
 extern LCM_DRIVER r63319_wqhd_dsi_vdo_truly_lcm_drv;
 extern LCM_DRIVER nt35598_wqhd_dsi_vdo_truly_lcm_drv;
@@ -90,6 +102,7 @@ extern LCM_DRIVER hx8369_rgb_6572_fpga_lcm_drv;
 extern LCM_DRIVER hx8369_mcu_6572_lcm_drv;
 extern LCM_DRIVER hx8369a_wvga_dsi_cmd_drv;
 extern LCM_DRIVER hx8369a_wvga_dsi_vdo_drv;
+extern LCM_DRIVER hx8389c_dsi_vdo_lcm_drv;
 extern LCM_DRIVER hx8392a_dsi_cmd_lcm_drv;
 extern LCM_DRIVER hx8392a_dsi_cmd_3lane_lcm_drv;
 extern LCM_DRIVER hx8392a_dsi_cmd_wvga_lcm_drv;
@@ -213,6 +226,7 @@ extern LCM_DRIVER clap070wp03xg_lvds_8163_lcm_drv;
 extern LCM_DRIVER nt35523_wxga_dsi_vdo_boe_lcm_drv;
 extern LCM_DRIVER otm1906b_fhd_dsi_cmd_jdi_tps65132_lcm_drv;
 extern LCM_DRIVER otm1906b_fhd_dsi_cmd_jdi_tps65132_mt6797_lcm_drv;
+extern LCM_DRIVER otm1906b_fhd_dsi_vdo_jdi_tps65132_mt6797_lcm_drv;
 extern LCM_DRIVER s6e3fa2_fhd1080_dsi_vdo_lcm_drv;
 extern LCM_DRIVER nt35523_wsvga_dsi_vdo_boe_lcm_drv;
 extern LCM_DRIVER ek79023_dsi_wsvga_vdo_lcm_drv;
@@ -225,6 +239,8 @@ extern LCM_DRIVER nt35695_fhd_dsi_cmd_truly_nt50358_720p_lcm_drv;
 extern LCM_DRIVER nt35695_fhd_dsi_cmd_truly_nt50358_qhd_lcm_drv;
 extern LCM_DRIVER nt35695_fhd_dsi_cmd_truly_nt50358_lcm_drv;
 extern LCM_DRIVER nt35695_fhd_dsi_vdo_truly_nt50358_lcm_drv;
+extern LCM_DRIVER nt35695_fhd_dsi_cmd_truly_nt50358_laneswap_lcm_drv;
+extern LCM_DRIVER nt35695_fhd_dsi_vdo_truly_nt50358_laneswap_lcm_drv;
 extern LCM_DRIVER nt35510_dsi_cmd_lcm_drv;
 extern LCM_DRIVER rm69032_dsi_cmd_lcm_drv;
 extern LCM_DRIVER st7789h2_dbi_lcm_drv;
@@ -234,8 +250,13 @@ extern LCM_DRIVER nt35595_fhd_dsi_cmd_truly_nt50358_extern_lcm_drv;
 extern LCM_DRIVER r69429_wqxga_dsi_vdo_lcm_drv;
 extern LCM_DRIVER hx8394c_wxga_dsi_vdo_lcm_drv;
 extern LCM_DRIVER nt35595_truly_fhd_dsi_vdo_lcm_drv;
-#endif
-
+extern LCM_DRIVER b080uan01_2_wuxga_dsi_vdo_lcm_drv;
+extern LCM_DRIVER nt36850_wqhd_dsi_2k_cmd_lcm_drv;
+extern LCM_DRIVER s6e3ha3_wqhd_2k_cmd_lcm_drv;
+extern LCM_DRIVER nt35595_fhd_dsi_cmd_truly_nt50358_720p_extern_lcm_drv;
+extern LCM_DRIVER nt35695_fhd_dsi_vdo_truly_nt50358_720p_lcm_drv;
+extern LCM_DRIVER ft8707_fhd_dsi_vdo_lgd_drv;
+extern LCM_DRIVER auo101dp26v1_dsi_vdo_lcm_drv;
 #ifdef BUILD_LK
 extern void mdelay(unsigned long msec);
 #endif

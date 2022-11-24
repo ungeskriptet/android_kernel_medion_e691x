@@ -1,3 +1,16 @@
+/*
+ * Copyright (C) 2015 MediaTek Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ */
+
 #ifndef BUILD_LK
 #include <linux/string.h>
 #include <linux/kernel.h>
@@ -35,9 +48,9 @@
 #endif
 
 #ifdef BUILD_LK
-#define LCD_DEBUG(fmt)  dprintf(CRITICAL, fmt)
+#define LCD_DEBUG(fmt, args...)  dprintf(CRITICAL, fmt, ##args)
 #else
-#define LCD_DEBUG(fmt)  pr_debug(fmt)
+#define LCD_DEBUG(fmt, args...)  pr_debug(fmt, ##args)
 #endif
 
 /* static unsigned char lcd_id_pins_value = 0xFF; */
@@ -48,7 +61,9 @@ static const unsigned char LCD_MODULE_ID = 0x01; /*  haobing modified 2013.07.11
 #define LCM_DSI_CMD_MODE	1
 #define FRAME_WIDTH		(1440)
 #define FRAME_HEIGHT		(2560)
-
+/* physical size in um */
+#define LCM_PHYSICAL_WIDTH									(74520)
+#define LCM_PHYSICAL_HEIGHT									(132480)
 #define GPIO_65132_EN GPIO_LCD_BIAS_ENP_PIN
 
 #define REGFLAG_PORT_SWAP	0xFFFA
@@ -379,9 +394,13 @@ static struct LCM_setting_table lcm_deep_sleep_mode_in_setting[] = {
 #endif
 
 static struct LCM_setting_table lcm_suspend_setting[] = {
+	/* Display off sequence */
 	{ 0x28, 0, {} },
+	{REGFLAG_DELAY, 20, {} },
 	{0x10, 0, {} },
-	{REGFLAG_DELAY, 120, {} }
+	{0xB0, 1, {0x00} },
+	{0xB1, 1, {0x01} },
+	{REGFLAG_DELAY, 80, {} },
 };
 
 #if 0 /* defined but not used */
@@ -443,6 +462,10 @@ static void lcm_get_params(LCM_PARAMS *params)
 
 	params->width  = FRAME_WIDTH;
 	params->height = FRAME_HEIGHT;
+	params->physical_width = LCM_PHYSICAL_WIDTH/1000;
+	params->physical_height = LCM_PHYSICAL_HEIGHT/1000;
+	params->physical_width_um = LCM_PHYSICAL_WIDTH;
+	params->physical_height_um = LCM_PHYSICAL_HEIGHT;
 	params->lcm_if = LCM_INTERFACE_DSI_DUAL;
 	params->lcm_cmd_if = LCM_INTERFACE_DSI0;
 
@@ -463,8 +486,8 @@ static void lcm_get_params(LCM_PARAMS *params)
 
 	/* Highly depends on LCD driver capability. */
 	params->dsi.packet_size = 256;
-	params->dsi.ssc_disable = 1;
-	/* params->dsi.ssc_range = 3; */
+	params->dsi.ssc_disable = 0;
+	params->dsi.ssc_range = 3;
 	/* video mode timing */
 
 	params->dsi.PS = LCM_PACKED_PS_24BIT_RGB888;
@@ -654,6 +677,7 @@ static void lcm_init(void)
 
 static void lcm_suspend(void)
 {
+	push_table(lcm_suspend_setting, sizeof(lcm_suspend_setting) / sizeof(struct LCM_setting_table), 1);
 #ifdef CONFIG_MTK_LEGACY
 	mt_set_gpio_mode(GPIO_65132_EN, GPIO_MODE_00);
 	mt_set_gpio_dir(GPIO_65132_EN, GPIO_DIR_OUT);
@@ -661,8 +685,6 @@ static void lcm_suspend(void)
 #else
 	set_gpio_lcd_enp(0);
 #endif
-	push_table(lcm_suspend_setting, sizeof(lcm_suspend_setting) / sizeof(struct LCM_setting_table), 1);
-	SET_RESET_PIN(0);
 }
 
 static void lcm_resume(void)
@@ -773,6 +795,105 @@ static void lcm_setbacklight_cmdq(void *handle, unsigned int level)
 }
 
 
+#define PARTIAL_WIDTH_ALIGN_LINE
+static inline int align_to(int value, int n, int lower_align)
+{
+	int x = value;
+
+	value = (((x) + ((n) - 1)) & ~((n) - 1));
+
+	if (lower_align) {
+		if (value > x)
+			value -= n;
+	} else {
+#ifndef PARTIAL_WIDTH_ALIGN_LINE
+		if (value <= x)
+			value += n;
+#else
+		if (value < x)
+			value += n;
+#endif
+	}
+	return value;
+}
+
+static void lcm_validate_roi(int *x, int *y, int *width, int *height)
+{
+	int x1 = *x;
+	int x2 = *width + x1 - 1;
+	int y1 = *y;
+	int y2 = *height + y1 - 1;
+	int w = *width;
+	int h = *height;
+	int lcm_w = FRAME_WIDTH;
+
+	/*  comfine  SP & EP value */
+#ifndef PARTIAL_WIDTH_ALIGN_LINE
+	x1 = 0;
+	y1 = align_to(y1, 2, 1);
+	y2 = align_to(y2, 2, 0) - 1;
+	w = lcm_w;
+#else
+	int ya_align = align_to(y2, 2, 0);
+	int lcm_half = lcm_w >> 1;
+	int roi_half = 0;
+
+	if (w == 0 || w == lcm_w) {
+		w = lcm_w;
+	} else {
+		y1 = align_to(y1, 2, 1);
+
+		if (ya_align == y2)
+			ya_align += 1;
+		else
+			ya_align -= 1;
+		y2 = ya_align;
+
+		if (lcm_half >= x2) {
+			roi_half = lcm_half - x1;
+		} else if (x1 >= lcm_half) {
+			roi_half = x2 - lcm_half;
+		} else {
+			int left = lcm_half - x1;
+			int right = x2 - lcm_half;
+
+			roi_half = left > right ? left : right;
+		}
+		if (roi_half < 16)
+			roi_half = 16;
+
+		roi_half = align_to(roi_half, 16, 0);
+		roi_half += 16;
+		if (roi_half > lcm_half)
+			roi_half = lcm_half;
+
+		x1 = lcm_half - roi_half;
+
+		w = roi_half << 1;
+	}
+#endif
+
+	if (h == 0) {
+		h = 6;
+	} else {
+		if (y2 - y1 < 6) {
+			if (y1 > 6)
+				y1 -= 6;
+			else
+				y2 += 6;
+		}
+		h = y2 - y1 + 1;
+	}
+	/*
+	   LCD_DEBUG("roi(%d,%d,%d,%d) to (%d,%d,%d,%d)\n",
+	 *x, *y, *width, *height, x1, y1, w, h);
+	 */
+	*x = x1;
+	*y = y1;
+	*width = w;
+	*height = h;
+}
+
 LCM_DRIVER r63419_wqhd_truly_phantom_cmd_lcm_drv = {
 	.name		= "r63419_wqhd_truly_phantom_2k_cmd_ok",
 	.set_util_funcs	= lcm_set_util_funcs,
@@ -789,6 +910,6 @@ LCM_DRIVER r63419_wqhd_truly_phantom_cmd_lcm_drv = {
 #if (LCM_DSI_CMD_MODE)
 	.update		= lcm_update,
 #endif
-
+	.validate_roi = lcm_validate_roi,
 };
 /* END PN:DTS2013053103858 , Added by d00238048, 2013.05.31*/

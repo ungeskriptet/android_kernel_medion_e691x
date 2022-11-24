@@ -8,6 +8,10 @@ config KEYBOARD_MTK
 	  To compile this driver as a module, choose M here: the
 	  module will be called mtk-kpd.
 
+config CUSTOM_KERNEL_KPD_MHALL
+    bool "support mhall function"
+    default n
+
 config KEYBOARD_HID
 	tristate "MediaTek hid keyboard support"
 	---help---
@@ -91,6 +95,13 @@ config KPD_PWRKEY_USE_PMIC
 	  To compile this driver as a module, choose M here: the
 	  module will be called kpd_pmic_pwrkey_hal.
 
+config KPD_ACCESS_PMIC_REGMAP
+	bool "Access pmic registers via regmap interface"
+	depends on KPD_PWRKEY_USE_PMIC
+	---help---
+	  Say Y here if pmic use regmap interface.
+
+	  If unuse, say N.
 
 config MTK_MRDUMP_KEY
 	bool "MediaTek mrdump reset key support"

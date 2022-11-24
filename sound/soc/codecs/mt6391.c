@@ -666,8 +666,8 @@ static void mt6391_spk_auto_trim_offset(struct mt6391_priv *codec_data)
 		udelay(100);
 	} while (retry_count--);
 
-	if (likely(wait_for_ready))
-		pr_debug("%s done retry_count = %d\n", __func__, retry_count);
+	if (wait_for_ready)
+		pr_info("%s done retry_count = %d\n", __func__, retry_count);
 	else
 		pr_warn("%s fail\n", __func__);
 
@@ -1280,6 +1280,33 @@ static void mt6391_turn_off_headset_speaker_amp(struct mt6391_priv *codec_data)
 	pr_debug("%s done\n", __func__);
 }
 
+static void mt6391_check_and_turn_off_all_amps(struct mt6391_priv *codec_data)
+{
+	if (codec_data->device_power[MT6391_DEV_OUT_EARPIECEL]) {
+		mt6391_turn_off_voice_amp(codec_data);
+		mt6391_ana_clk_off(codec_data);
+		codec_data->device_power[MT6391_DEV_OUT_EARPIECEL] = false;
+	}
+
+	if (codec_data->device_power[MT6391_DEV_OUT_SPEAKERL]) {
+		mt6391_turn_off_speaker_amp(codec_data);
+		mt6391_ana_clk_off(codec_data);
+		codec_data->device_power[MT6391_DEV_OUT_SPEAKERL] = false;
+	}
+
+	if (codec_data->device_power[MT6391_DEV_OUT_HEADSETL]) {
+		mt6391_turn_off_headphone_amp(codec_data);
+		mt6391_ana_clk_off(codec_data);
+		codec_data->device_power[MT6391_DEV_OUT_HEADSETL] = false;
+	}
+
+	if (codec_data->device_power[MT6391_DEV_OUT_SPEAKER_HEADSET_L]) {
+		mt6391_turn_off_headset_speaker_amp(codec_data);
+		mt6391_ana_clk_off(codec_data);
+		codec_data->device_power[MT6391_DEV_OUT_SPEAKER_HEADSET_L] = false;
+	}
+}
+
 static void mt6391_turn_on_dmic(struct mt6391_priv *codec_data)
 {
 	uint32_t rate = codec_data->sample_rate[MT6391_ADDA_ADC];
@@ -1398,9 +1425,11 @@ static int mt6391_audio_amp_set(struct snd_kcontrol *kcontrol,
 
 	mutex_lock(&codec_data->ctrl_mutex);
 
-	pr_debug("%s gain = %ld\n ", __func__, ucontrol->value.integer.value[0]);
+	pr_debug("%s %ld\n ", __func__, ucontrol->value.integer.value[0]);
+
 	if (ucontrol->value.integer.value[0] &&
 	    !codec_data->device_power[MT6391_DEV_OUT_HEADSETL]) {
+		mt6391_check_and_turn_off_all_amps(codec_data);
 		mt6391_ana_clk_on(codec_data);
 		mt6391_turn_on_headphone_amp(codec_data);
 		codec_data->device_power[MT6391_DEV_OUT_HEADSETL] = true;
@@ -1410,6 +1439,7 @@ static int mt6391_audio_amp_set(struct snd_kcontrol *kcontrol,
 		mt6391_turn_off_headphone_amp(codec_data);
 		mt6391_ana_clk_off(codec_data);
 	}
+
 	mutex_unlock(&codec_data->ctrl_mutex);
 	return 0;
 }
@@ -1437,12 +1467,15 @@ static int mt6391_voice_amp_set(struct snd_kcontrol *kcontrol,
 
 	if (ucontrol->value.integer.value[0] &&
 	    !codec_data->device_power[MT6391_DEV_OUT_EARPIECEL]) {
+		mt6391_check_and_turn_off_all_amps(codec_data);
+		mt6391_ana_clk_on(codec_data);
 		mt6391_turn_on_voice_amp(codec_data);
 		codec_data->device_power[MT6391_DEV_OUT_EARPIECEL] = true;
 	} else if (!ucontrol->value.integer.value[0] &&
 		   codec_data->device_power[MT6391_DEV_OUT_EARPIECEL]) {
 		codec_data->device_power[MT6391_DEV_OUT_EARPIECEL] = false;
 		mt6391_turn_off_voice_amp(codec_data);
+		mt6391_ana_clk_off(codec_data);
 	}
 
 	mutex_unlock(&codec_data->ctrl_mutex);
@@ -1466,9 +1499,13 @@ static int mt6391_speaker_amp_set(struct snd_kcontrol *kcontrol,
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	struct mt6391_priv *codec_data = snd_soc_component_get_drvdata(component);
 
-	pr_debug("%s gain = %ld\n ", __func__, ucontrol->value.integer.value[0]);
+	mutex_lock(&codec_data->ctrl_mutex);
+
+	pr_debug("%s %ld\n ", __func__, ucontrol->value.integer.value[0]);
+
 	if (ucontrol->value.integer.value[0] &&
 	    !codec_data->device_power[MT6391_DEV_OUT_SPEAKERL]) {
+		mt6391_check_and_turn_off_all_amps(codec_data);
 		mt6391_ana_clk_on(codec_data);
 		mt6391_turn_on_speaker_amp(codec_data);
 		codec_data->device_power[MT6391_DEV_OUT_SPEAKERL] = true;
@@ -1478,6 +1515,8 @@ static int mt6391_speaker_amp_set(struct snd_kcontrol *kcontrol,
 		mt6391_turn_off_speaker_amp(codec_data);
 		mt6391_ana_clk_off(codec_data);
 	}
+
+	mutex_unlock(&codec_data->ctrl_mutex);
 	return 0;
 }
 
@@ -1498,9 +1537,13 @@ static int mt6391_headset_speaker_amp_set(struct snd_kcontrol *kcontrol,
 	struct snd_soc_component *component = snd_kcontrol_chip(kcontrol);
 	struct mt6391_priv *codec_data = snd_soc_component_get_drvdata(component);
 
-	pr_debug("%s gain = %ld\n ", __func__, ucontrol->value.integer.value[0]);
+	mutex_lock(&codec_data->ctrl_mutex);
+
+	pr_debug("%s %ld\n ", __func__, ucontrol->value.integer.value[0]);
+
 	if (ucontrol->value.integer.value[0] &&
 	    !codec_data->device_power[MT6391_DEV_OUT_SPEAKER_HEADSET_L]) {
+		mt6391_check_and_turn_off_all_amps(codec_data);
 		mt6391_ana_clk_on(codec_data);
 		mt6391_turn_on_headset_speaker_amp(codec_data);
 		codec_data->device_power[MT6391_DEV_OUT_SPEAKER_HEADSET_L] = true;
@@ -1510,6 +1553,8 @@ static int mt6391_headset_speaker_amp_set(struct snd_kcontrol *kcontrol,
 		mt6391_turn_off_headset_speaker_amp(codec_data);
 		mt6391_ana_clk_off(codec_data);
 	}
+
+	mutex_unlock(&codec_data->ctrl_mutex);
 	return 0;
 }
 

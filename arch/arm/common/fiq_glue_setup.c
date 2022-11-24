@@ -29,9 +29,28 @@ static struct fiq_glue_handler *current_handler;
 static fiq_return_handler_t fiq_return_handler;
 static DEFINE_MUTEX(fiq_glue_lock);
 
+#ifdef CONFIG_MTK_FIQ_PROTECT
+extern void *vector_fiq_offset;
+#endif
+
 static void fiq_glue_setup_helper(void *info)
 {
 	struct fiq_glue_handler *handler = info;
+#ifdef CONFIG_MTK_FIQ_PROTECT
+	unsigned offset = (unsigned)&vector_fiq_offset;
+	unsigned int length = &fiq_glue_end - &fiq_glue;
+
+	*(volatile unsigned int *)(&fiq_glue_end - 4) =
+		(unsigned int)handler->fiq;
+	*(volatile unsigned int *)(&fiq_glue_end - 8) =
+		(unsigned int)handler;
+	*(volatile unsigned int *)(&fiq_glue_end - 12 - 4*smp_processor_id()) =
+		(unsigned int)(__get_cpu_var(fiq_stack) + THREAD_START_SP);
+	*(volatile unsigned int *)(&fiq_glue_end - 28) =
+		(unsigned int)fiq_return_handler;
+	*(volatile unsigned int *)(&fiq_glue_end - 32) =
+		0xffff0000 + offset + length;
+#endif
 	fiq_glue_setup(handler->fiq, handler,
 		__get_cpu_var(fiq_stack) + THREAD_START_SP,
 		fiq_return_handler);

@@ -1,3 +1,16 @@
+/*
+ * Copyright (C) 2015 MediaTek Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ */
+
 #include <linux/string.h>
 #include <linux/wait.h>
 #include <linux/platform_device.h>
@@ -147,10 +160,13 @@ void lcm_get_gpio_infor(void)
 {
 	static struct device_node *node;
 
-	node = of_find_compatible_node(NULL, NULL, "mediatek,mt6735-dispsys");
+	node = of_find_compatible_node(NULL, NULL, "mediatek,lcm");
 
 	GPIO_LCD_PWR_EN = of_get_named_gpio(node, "lcm_power_gpio", 0);
 	GPIO_LCD_BL_EN = of_get_named_gpio(node, "lcm_bl_gpio", 0);
+
+	gpio_request(GPIO_LCD_PWR_EN, "GPIO_LCD_PWR_EN");
+	gpio_request(GPIO_LCD_BL_EN, "GPIO_LCD_BL_EN");
 }
 
 static void lcm_set_gpio_output(unsigned int GPIO, unsigned int output)

@@ -23,6 +23,7 @@
 #include <asm/debugreg.h>
 #include <asm/fpu-internal.h> /* pcntxt_mask */
 #include <asm/cpu.h>
+#include <asm/mmu_context.h>
 
 #ifdef CONFIG_X86_32
 __visible unsigned long saved_context_ebx;
@@ -119,9 +120,7 @@ void save_processor_state(void)
 	__save_processor_state(&saved_context);
 	x86_platform.save_sched_clock_state();
 }
-#ifdef CONFIG_X86_32
 EXPORT_SYMBOL(save_processor_state);
-#endif
 
 static void do_fpu_end(void)
 {
@@ -154,7 +153,7 @@ static void fix_processor_context(void)
 	syscall_init();				/* This sets MSR_*STAR and related */
 #endif
 	load_TR_desc();				/* This does ltr */
-	load_LDT(&current->active_mm->context);	/* This does lldt */
+	load_mm_ldt(current->active_mm);	/* This does lldt */
 }
 
 /**

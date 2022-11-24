@@ -22,6 +22,30 @@
 		/* fiq stack: r0-r15,cpsr,spsr of interrupted mode */
 
 ENTRY(fiq_glue)
+#ifdef CONFIG_MTK_FIQ_PROTECT
+		/*
+		 * it is not easy to use ldr directive here to get the address
+		 * of fiq_glue_end, so we use calculated pc-relative address
+		 * WARN: should update the imm value if you add code in this func
+		 */
+		ldr	r12,[pc, #256]
+		ldr	r8, [r12, #-4]
+		ldr	r9, [r12, #-8]
+		/* calculate the cpuid, save to r11 */
+		mrc	p15, 0, r10, c0, c0, 5
+		mov	r11, r10
+		and	r10, r10, #0xff
+		mov	r11, r11, lsr #8
+		and	r11, r11, #0xff
+		mov	r11, r11, lsl #2
+		add	r11, r11, r10
+		/* calculate the address which stored the sp address */
+		mov	r11, r11, lsl #2
+		sub	r12, r12, r11
+		ldr	sp, [r12, #-12]
+		mov	r10, #1
+		ldr	r11, [r12, #-28]
+#endif
 		/* store pc, cpsr from previous mode, reserve space for spsr */
 		mrs	r12, spsr
 		sub	lr, lr, #4
@@ -99,7 +123,16 @@ exit_fiq:
 nested_fiq:
 		orr	r12, r12, #(PSR_F_BIT)
 		b	exit_fiq
-
+#ifdef CONFIG_MTK_FIQ_PROTECT
+		nop /* fiq_glue_end in high vector */
+		nop /* smc call number */
+		nop /* cpu3 fiq sp */
+		nop /* cpu2 fiq sp */
+		nop /* cpu1 fiq sp */
+		nop /* cpu0 fiq sp */
+		nop /* fiq priv data */
+		nop /* fiq isr */
+#endif
 fiq_glue_end:
 
 ENTRY(fiq_glue_setup) /* func, data, sp, smc call number */

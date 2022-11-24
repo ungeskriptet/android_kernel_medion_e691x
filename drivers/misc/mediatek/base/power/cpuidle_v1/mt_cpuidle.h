@@ -1,3 +1,16 @@
+/*
+ * Copyright (C) 2016 MediaTek Inc.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See http://www.gnu.org/licenses/gpl-2.0.html for more details.
+ */
+
 #ifndef MT_CPUIDLE_H
 #define MT_CPUIDLE_H
 
@@ -100,7 +113,8 @@ extern void disable_dcache_safe(bool is_inner_off);
 extern void cpu_wake_up_errata_802022(void);
 extern unsigned *copy_words(volatile unsigned *destination,
 			    volatile unsigned *source, unsigned num_words);
-
+extern void mt_save_banked_registers(unsigned int *container);
+extern void mt_restore_banked_registers(unsigned int *container);
 extern unsigned long *aee_rr_rec_cpu_dormant(void);
 extern unsigned long *aee_rr_rec_cpu_dormant_pa(void);
 

@@ -1,3 +1,16 @@
+/*
+ * Copyright (C) 2015 MediaTek Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ */
+
 #include "sec_hal.h"
 #include "sec_error.h"
 #include "sec_boot_lib.h"
@@ -72,6 +85,24 @@ int masp_ccci_version_info(void)
 {
 	return CCCI_VERSION;
 }
+
+int sec_ccci_file_open(char *file_path)
+{
+	int fp_id;
+
+	fp_id = osal_filp_open_read_only(file_path);
+
+	if (fp_id != OSAL_FILE_NULL)
+		return fp_id;
+
+	return -1;
+}
+
+int sec_ccci_file_close(int fp_id)
+{
+	return osal_filp_close(fp_id);
+}
+
 
 int masp_ccci_is_cipherfmt(int fp_id, unsigned int start_off, unsigned int *img_len)
 {

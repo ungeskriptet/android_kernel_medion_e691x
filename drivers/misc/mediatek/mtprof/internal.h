@@ -1,3 +1,16 @@
+/*
+ * Copyright (C) 2015 MediaTek Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ */
+
 /* common and private utility for mtprof */
 #include <linux/seq_file.h>
 #include <linux/sched.h>
@@ -87,13 +100,3 @@ unsigned long long mtprof_get_cpu_iowait(int cpu);
 void start_record_task(void);
 void stop_record_task(void);
 void reset_record_task(void);
-
-#include <asm/hardirq.h>
-
-#define MAX_NR_IRQS 512
-extern int mt_irq_count[NR_CPUS][MAX_NR_IRQS];
-#ifdef CONFIG_SMP
-extern int mt_local_irq_count[NR_CPUS][NR_IPI];
-#endif
-extern unsigned long long mt_save_irq_count_time;
-extern spinlock_t mt_irq_count_lock;

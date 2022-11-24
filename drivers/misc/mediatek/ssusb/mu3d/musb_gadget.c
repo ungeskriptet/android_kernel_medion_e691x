@@ -746,10 +746,10 @@ static int musb_gadget_disable(struct usb_ep *ep)
 	musb->active_ep--;
 	mu3d_dbg(K_INFO, "[U3D]%s active_ep=%d, mu3d is_active=%d\n", __func__,
 		 musb->active_ep, musb->is_active);
-
+#if 0
 	if (musb->active_ep == 0 && musb->is_active == 0 && !is_maual_otg(musb->ssusb))
 		queue_work(musb->wq, &musb->suspend_work);
-
+#endif
 	spin_unlock_irqrestore(&(musb->lock), flags);
 
 	dev_dbg(musb->controller, "%s\n", musb_ep->end_point.name);
@@ -1612,7 +1612,7 @@ static int musb_gadget_stop(struct usb_gadget *g, struct usb_gadget_driver *driv
 	dev_dbg(musb->controller, "unregistering driver %s\n", driver->function);
 
 	musb->is_active = 0;
-	/*musb_platform_try_idle(musb, 0);*/
+	musb_platform_try_idle(musb, 0);
 	spin_unlock_irqrestore(&musb->lock, flags);
 
 	if (musb->start_mu3d)
